@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "id": "auth-expiration-boundary",
+      "task": "Fix authentication so a matching, enabled token is valid only before its expiration. Do not change tests.",
+      "source": {
+        "path": "../examples/broken_python_repo",
+        "tree_sha256": "c1a9eca825682224b45683dd4ee8113f61b6bd821bc35ed3d7db6f5fdf1f2617"
+      },
+      "visible_test_argv": ["pytest", "-q", "tests"],
+      "hidden_evaluation": {
+        "path": "hidden/auth",
+        "target_test_argv": ["pytest", "-q", "/evaluation/target"],
+        "regression_test_argv": ["pytest", "-q", "/evaluation/regression"]
+      },
+      "limits": {
+        "max_iterations": 10,
+        "max_tool_calls": 30,
+        "max_total_tokens": 80000,
+        "max_seconds": 600,
+        "max_output_tokens": 8192,
+        "max_api_retries": 0
+      },
+      "editable_globs": ["auth.py"],
+      "protected_globs": ["tests/**", "**/tests/**", "test_*.py", "**/test_*.py"]
+    },
+    {
+      "id": "sequence-chunk-boundary",
+      "task": "Fix chunks() so it preserves every input item, including full and partial final chunks, while retaining its invalid-size behavior. Do not change tests.",
+      "source": {
+        "path": "fixtures/chunking",
+        "tree_sha256": "fb414f48a6331f96863f2e1026331fc3ff238918ec903fa1e61a91c019c2a43a"
+      },
+      "visible_test_argv": ["pytest", "-q", "tests"],
+      "hidden_evaluation": {
+        "path": "hidden/chunking",
+        "target_test_argv": ["pytest", "-q", "/evaluation/target"],
+        "regression_test_argv": ["pytest", "-q", "/evaluation/regression"]
+      },
+      "limits": {
+        "max_iterations": 10,
+        "max_tool_calls": 30,
+        "max_total_tokens": 80000,
+        "max_seconds": 600,
+        "max_output_tokens": 8192,
+        "max_api_retries": 0
+      },
+      "editable_globs": ["chunks.py"],
+      "protected_globs": ["tests/**", "**/tests/**", "test_*.py", "**/test_*.py"]
+    },
+    {
+      "id": "slug-separator-normalization",
+      "task": "Fix slugify() so runs of whitespace or punctuation become one separator and leading or trailing separators are removed, without breaking already-slugged or empty values. Do not change tests.",
+      "source": {
+        "path": "fixtures/slugify",
+        "tree_sha256": "42a9b4e8066796c29bcae25760f5908916e458dcf77476c9084ff182a1030ae8"
+      },
+      "visible_test_argv": ["pytest", "-q", "tests"],
+      "hidden_evaluation": {
+        "path": "hidden/slugify",
+        "target_test_argv": ["pytest", "-q", "/evaluation/target"],
+        "regression_test_argv": ["pytest", "-q", "/evaluation/regression"]
+      },
+      "limits": {
+        "max_iterations": 10,
+        "max_tool_calls": 30,
+        "max_total_tokens": 80000,
+        "max_seconds": 600,
+        "max_output_tokens": 8192,
+        "max_api_retries": 0
+      },
+      "editable_globs": ["slug.py"],
+      "protected_globs": ["tests/**", "**/tests/**", "test_*.py", "**/test_*.py"]
+    }
+  ]
+}
+
