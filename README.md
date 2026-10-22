@@ -18,44 +18,19 @@ them to improve its patch. Hidden evaluation tests run only after the agent is
 finished, so their contents and results are not fed back to it.
 
 ```mermaid
-flowchart TD
-    subgraph RUN["1. Repair run — coderepair run"]
-        INPUT["Task + clean Git repository<br/>User approves the pytest command"]
-        SNAPSHOT["Check repository state<br/>Snapshot committed HEAD with git archive"]
-        COPY["Temporary working copy<br/>Original repository stays untouched"]
-        AGENT["Claude agent loop<br/>Task, conversation history, and budgets"]
-        TOOLS["Limited repository tools<br/>List · search · read · patch"]
-        PATCHCHECK["Validate patch<br/>Safe paths · protected files · Python syntax"]
-        TESTREQ["Agent requests visible tests"]
-        DOCKER["Restricted Docker container<br/>Fixed approved pytest command"]
-        RESULT["Test result returned to agent"]
-        ARTIFACTS["Run artifacts<br/>diff.patch · result.json · summary.md · trace.jsonl"]
-        DONE{"Latest workspace version<br/>passed visible tests?"}
-        STATUS["Status: visible tests passed"]
-        UNVERIFIED["Status: unverified or incomplete"]
+flowchart TB
+    A["Task + clean Git repo<br/>Approve the pytest command"] -->
+    B["Check repo and snapshot committed HEAD"] -->
+    C["Temporary workspace<br/>Original repo stays untouched"] -->
+    D["Claude inspects and edits<br/>using limited repository tools"] -->
+    E["Validate edits<br/>Safe paths · protected files · Python syntax"] -->
+    F["Run approved visible tests<br/>in restricted Docker"] -->
+    G{"Visible tests pass<br/>on the latest edits?"}
+    G -->|"Yes"| H["Save patch, results, summary, and trace"]
+    G -->|"No"| I["Agent may inspect results and try again"]
+    I --> D
 
-        INPUT --> SNAPSHOT --> COPY --> AGENT
-        AGENT -->|"inspect"| TOOLS
-        TOOLS -->|"read/search results"| AGENT
-        AGENT -->|"proposed edits"| PATCHCHECK
-        PATCHCHECK -->|"valid patch applied to temp copy"| AGENT
-        AGENT -->|"run approved tests"| TESTREQ --> DOCKER --> RESULT --> AGENT
-        AGENT -->|"finishes"| DONE
-        DONE -->|"yes"| STATUS --> ARTIFACTS
-        DONE -->|"no"| UNVERIFIED --> ARTIFACTS
-    end
-
-    subgraph EVALUATION["2. Optional independent evaluation — coderepair eval"]
-        FRESHCOPY["Fresh copy of the pinned source"]
-        CANDIDATE["Apply agent patch to evaluation copy"]
-        HIDDEN["Mount hidden target and regression tests read-only"]
-        EVALDOCKER["Run checks in restricted Docker"]
-        EVALREPORT["Evaluation report<br/>Hidden tests are not shown to the agent"]
-
-        FRESHCOPY --> CANDIDATE --> HIDDEN --> EVALDOCKER --> EVALREPORT
-    end
-
-    ARTIFACTS -. "optional, after review" .-> FRESHCOPY
+    H -. "Optional: coderepair eval" .-> J["Fresh copy + hidden tests<br/>Run separately; results are not sent to Claude"]
 ```
 
 The agent can finish without passing visible tests; its final text alone does
