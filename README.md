@@ -18,19 +18,16 @@ them to improve its patch. Hidden evaluation tests run only after the agent is
 finished, so their contents and results are not fed back to it.
 
 ```mermaid
-flowchart TB
-    A["Task + clean Git repo<br/>Approve the pytest command"] -->
-    B["Check repo and snapshot committed HEAD"] -->
-    C["Temporary workspace<br/>Original repo stays untouched"] -->
-    D["Claude inspects and edits<br/>using limited repository tools"] -->
-    E["Validate edits<br/>Safe paths · protected files · Python syntax"] -->
-    F["Run approved visible tests<br/>in restricted Docker"] -->
-    G{"Visible tests pass<br/>on the latest edits?"}
-    G -->|"Yes"| H["Save patch, results, summary, and trace"]
-    G -->|"No"| I["Agent may inspect results and try again"]
-    I --> D
+flowchart LR
+    A["START<br/>Task + clean Git HEAD<br/>Approve pytest command<br/>Snapshot to temp workspace;<br/>original repo stays untouched"]
+    B["REPAIR LOOP<br/>Claude uses list, search, read,<br/>and structured patch tools<br/>Validate safe paths + Python syntax<br/>Run fixed pytest command in Docker"]
+    C["OUTPUT<br/>Reviewable patch + run report<br/>JSONL execution trace"]
+    D["OPTIONAL EVALUATION<br/>Fresh copy + hidden target/regression tests<br/>Run after agent; results stay separate"]
 
-    H -. "Optional: coderepair eval" .-> J["Fresh copy + hidden tests<br/>Run separately; results are not sent to Claude"]
+    A --> B
+    B -->|"test results inform another attempt"| B
+    B -->|"agent finishes"| C
+    C -. "coderepair eval" .-> D
 ```
 
 The agent can finish without passing visible tests; its final text alone does
