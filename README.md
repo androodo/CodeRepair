@@ -12,28 +12,28 @@ harness so that question can be measured rather than answered by model claims.
 
 ## Architecture
 
-The diagram separates the **repair run** from the optional **independent
-evaluation**. During a repair, the agent can see visible test results and use
-them to improve its patch. Hidden evaluation tests run only after the agent is
-finished, so their contents and results are not fed back to it.
+Here’s the process at a glance:
 
 ```mermaid
 flowchart LR
-    A["START<br/>Task + clean Git HEAD<br/>Approve pytest command<br/>Snapshot to temp workspace;<br/>original repo stays untouched"]
-    B["REPAIR LOOP<br/>Claude uses list, search, read,<br/>and structured patch tools<br/>Validate safe paths + Python syntax<br/>Run fixed pytest command in Docker"]
-    C["OUTPUT<br/>Reviewable patch + run report<br/>JSONL execution trace"]
-    D["OPTIONAL EVALUATION<br/>Fresh copy + hidden target/regression tests<br/>Run after agent; results stay separate"]
+    A["1 · YOUR INPUT<br/><br/>Task<br/>Clean Git repo<br/>Test command"]
+    B["2 · CODE REPAIR<br/><br/>Claude edits a copy<br/>Docker runs tests<br/>Fail? It tries again"]
+    C["3 · YOUR REVIEW<br/><br/>Proposed code changes<br/>Test results<br/>Run log"]
 
     A --> B
-    B -->|"test results inform another attempt"| B
-    B -->|"agent finishes"| C
-    C -. "coderepair eval" .-> D
+    B --> C
+
+    classDef input fill:#e8f1ff,stroke:#3b6ea8,color:#172b4d,stroke-width:2px
+    classDef repair fill:#fff4d6,stroke:#b7791f,color:#422d0e,stroke-width:2px
+    classDef review fill:#e5f5e8,stroke:#39804a,color:#173b20,stroke-width:2px
+    class A input
+    class B repair
+    class C review
 ```
 
-The agent can finish without passing visible tests; its final text alone does
-not count as verification. Any edit after a test run makes that test result
-outdated. Applying a patch to the original repository is a separate, optional
-step that requires human approval.
+The original repo is not edited. Tests run in Docker; hidden evaluation tests
+are separate and run only after the agent finishes. You decide whether to apply
+the patch.
 
 ## What is implemented
 
