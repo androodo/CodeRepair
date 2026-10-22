@@ -12,28 +12,56 @@ harness so that question can be measured rather than answered by model claims.
 
 ## Architecture
 
-```text
-task + clean Git HEAD
-          |
-          v
-  git archive snapshot  -- source worktree is never edited
-          |
-          v
- Anthropic Messages loop <----------------------------+
-   | full assistant blocks                            |
-   | JSON-schema calls                                |
-   v                                                  |
- list / search / read / structured patch / tests      |
-                         |                             |
-                         v                             |
-            AST validation + hardened Docker pytest --+
-                         |
-                         v
-        diff.patch + result.json + summary.md + trace.jsonl
+The diagram separates the **repair run** from the optional **independent
+evaluation**. During a repair, the agent can see visible test results and use
+them to improve its patch. Hidden evaluation tests run only after the agent is
+finished, so their contents and results are not fed back to it.
 
-Independent evaluation happens later in a fresh copy. Hidden tests are mounted
-read-only at /evaluation and are never present in the agent workspace.
+```mermaid
+flowchart TD
+    subgraph RUN["1. Repair run — coderepair run"]
+        INPUT["Task + clean Git repository<br/>User approves the pytest command"]
+        SNAPSHOT["Check repository state<br/>Snapshot committed HEAD with git archive"]
+        COPY["Temporary working copy<br/>Original repository stays untouched"]
+        AGENT["Claude agent loop<br/>Task, conversation history, and budgets"]
+        TOOLS["Limited repository tools<br/>List · search · read · patch"]
+        PATCHCHECK["Validate patch<br/>Safe paths · protected files · Python syntax"]
+        TESTREQ["Agent requests visible tests"]
+        DOCKER["Restricted Docker container<br/>Fixed approved pytest command"]
+        RESULT["Test result returned to agent"]
+        ARTIFACTS["Run artifacts<br/>diff.patch · result.json · summary.md · trace.jsonl"]
+        DONE{"Latest workspace version<br/>passed visible tests?"}
+        STATUS["Status: visible tests passed"]
+        UNVERIFIED["Status: unverified or incomplete"]
+
+        INPUT --> SNAPSHOT --> COPY --> AGENT
+        AGENT -->|"inspect"| TOOLS
+        TOOLS -->|"read/search results"| AGENT
+        AGENT -->|"proposed edits"| PATCHCHECK
+        PATCHCHECK -->|"valid patch applied to temp copy"| AGENT
+        AGENT -->|"run approved tests"| TESTREQ --> DOCKER --> RESULT --> AGENT
+        AGENT -->|"finishes"| DONE
+        DONE -->|"yes"| STATUS --> ARTIFACTS
+        DONE -->|"no"| UNVERIFIED --> ARTIFACTS
+    end
+
+    subgraph EVALUATION["2. Optional independent evaluation — coderepair eval"]
+        FRESHCOPY["Fresh copy of the pinned source"]
+        CANDIDATE["Apply agent patch to evaluation copy"]
+        HIDDEN["Mount hidden target and regression tests read-only"]
+        EVALDOCKER["Run checks in restricted Docker"]
+        EVALREPORT["Evaluation report<br/>Hidden tests are not shown to the agent"]
+
+        FRESHCOPY --> CANDIDATE --> HIDDEN --> EVALDOCKER --> EVALREPORT
+    end
+
+    ARTIFACTS -. "optional, after review" .-> FRESHCOPY
 ```
+
+The agent can finish without passing visible tests; its final text alone does
+not count as verification. Any edit after a test run makes that test result
+outdated. Applying a patch to the original repository is a separate, optional
+step that requires human approval.
 
 ## What is implemented
 
@@ -227,4 +255,3 @@ neither API credits nor a daemon. Opt-in integration tests are marked
 
 See [docs/ENGINEERING.md](docs/ENGINEERING.md) for the interview-oriented design
 walkthrough.
-
